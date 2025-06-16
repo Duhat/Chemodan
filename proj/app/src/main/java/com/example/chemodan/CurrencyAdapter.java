@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 
+import java.text.DecimalFormat;
 import java.util.List;
 
 public class CurrencyAdapter extends RecyclerView.Adapter<CurrencyAdapter.CurrencyViewHolder> {
@@ -21,6 +22,7 @@ public class CurrencyAdapter extends RecyclerView.Adapter<CurrencyAdapter.Curren
     private List<СurrencyItem> currencies;
     private OnCurrencyChangeListener listener;
     private int focusedIndex = -1;
+    private static final DecimalFormat decimalFormat = new DecimalFormat("0.00");
 
     public interface OnCurrencyChangeListener {
         void onCurrencyValueChanged(СurrencyItem baseCurrency);
@@ -43,7 +45,7 @@ public class CurrencyAdapter extends RecyclerView.Adapter<CurrencyAdapter.Curren
     public void onBindViewHolder(@NonNull CurrencyViewHolder holder, int position) {
         СurrencyItem item = currencies.get(position);
         holder.codeText.setText(item.getCode());
-        holder.inputValue.setText(String.valueOf(item.getValue()));
+        holder.inputValue.setText(decimalFormat.format(item.getValue()));
 
         // Load flag using flagcdn.com
         String flagUrl = "https://flagcdn.com/w80/" + item.getCode().substring(0, 2).toLowerCase() + ".png";

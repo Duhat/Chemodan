@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Chemodan</string>
+    <string name="add_currency">Добавить валюту</string>
 </resources>

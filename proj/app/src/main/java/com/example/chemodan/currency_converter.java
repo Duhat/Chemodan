@@ -11,6 +11,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.ItemTouchHelper;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -23,6 +24,10 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
+import android.app.AlertDialog;
+import android.view.View;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 public class currency_converter extends AppCompatActivity implements CurrencyAdapter.OnCurrencyChangeListener {
     private RecyclerView recyclerView;
     private CurrencyAdapter adapter;
@@ -30,8 +35,9 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
     private SharedPreferences preferences;
     private static final String PREF_NAME = "CurrencyPrefs";
     private static final String KEY_CURRENCIES = "currencies";
-    private static final String API_KEY = "YOUR_API_KEY"; // Replace with your API key
+    private static final String API_KEY = "5594bb7d6b18e1c5968bb3e4";
     private static final String BASE_URL = "https://v6.exchangerate-api.com/v6/";
+    private static final String[] ALL_CURRENCIES = {"USD", "EUR", "JPY", "GBP", "CNY", "RUB", "AUD", "CAD", "CHF", "SEK", "NZD", "SGD", "HKD", "NOK", "KRW", "TRY", "INR", "BRL", "ZAR"};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +61,31 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
 
         loadSavedCurrencies();
         fetchExchangeRates();
+
+        FloatingActionButton fab = findViewById(R.id.fab_add_currency);
+        fab.setOnClickListener(v -> showAddCurrencyDialog());
+
+        // Swipe to delete (кроме RUB и USD)
+        ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+                return false;
+            }
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                int pos = viewHolder.getAdapterPosition();
+                String code = currencies.get(pos).getCode();
+                if (code.equals("RUB") || code.equals("USD")) {
+                    adapter.notifyItemChanged(pos);
+                    Toast.makeText(currency_converter.this, "RUB и USD нельзя удалить", Toast.LENGTH_SHORT).show();
+                } else {
+                    currencies.remove(pos);
+                    saveCurrencies();
+                    adapter.notifyItemRemoved(pos);
+                }
+            }
+        };
+        new ItemTouchHelper(simpleCallback).attachToRecyclerView(recyclerView);
     }
 
     private void loadSavedCurrencies() {
@@ -105,5 +136,41 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
     @Override
     public void onCurrencyValueChanged(СurrencyItem baseCurrency) {
         adapter.updateValues(baseCurrency);
+    }
+
+    private void showAddCurrencyDialog() {
+        // Список только тех валют, которых ещё нет
+        List<String> available = new ArrayList<>();
+        for (String code : ALL_CURRENCIES) {
+            boolean exists = false;
+            for (СurrencyItem item : currencies) {
+                if (item.getCode().equals(code)) { exists = true; break; }
+            }
+            if (!exists) available.add(code);
+        }
+        if (available.isEmpty()) {
+            Toast.makeText(this, "Все валюты уже добавлены", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String[] arr = available.toArray(new String[0]);
+        new AlertDialog.Builder(this)
+            .setTitle("Выберите валюту")
+            .setItems(arr, (dialog, which) -> {
+                String selected = arr[which];
+                currencies.add(new СurrencyItem(selected, 1.0, 0.0, false));
+                saveCurrencies();
+                fetchExchangeRates();
+                adapter.notifyDataSetChanged();
+            })
+            .show();
+    }
+
+    private void saveCurrencies() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < currencies.size(); i++) {
+            sb.append(currencies.get(i).getCode());
+            if (i < currencies.size() - 1) sb.append(",");
+        }
+        preferences.edit().putString(KEY_CURRENCIES, sb.toString()).apply();
     }
 }
