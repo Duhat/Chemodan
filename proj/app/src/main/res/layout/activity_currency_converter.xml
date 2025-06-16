@@ -23,13 +23,6 @@
             android:paddingStart="20dp"
             android:paddingEnd="20dp">
 
-            <ImageView
-                android:id="@+id/btn_back"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:src="@drawable/ic_chevron_small_right"
-                android:contentDescription="Назад"/>
-
             <View
                 android:layout_width="0dp"
                 android:layout_height="0dp"
