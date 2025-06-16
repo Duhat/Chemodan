@@ -13,7 +13,7 @@
         android:background="@drawable/gradient_background">
 
         <LinearLayout
-            android:id="@+id/top_bar_weather"
+            android:id="@+id/btn_menu_weather_bar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -29,25 +29,28 @@
                 android:layout_weight="1" />
 
             <ImageView
-                android:id="@+id/btn_menu_weather"
+                android:id="@+id/btn_menu"
                 android:layout_width="32dp"
                 android:layout_height="32dp"
                 android:src="@drawable/ic_list_pointers"
                 android:contentDescription="Меню"/>
+
+
+            <EditText
+                android:id="@+id/search_city"
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                android:layout_margin="16dp"
+                android:background="@drawable/input_bg"
+                android:hint="Search for city..."
+                android:paddingStart="16dp"
+                android:paddingEnd="40dp"
+                android:textColor="#000"
+                android:textSize="16sp"
+                android:layout_marginTop="56dp"/>
         </LinearLayout>
 
-        <EditText
-            android:id="@+id/search_city"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_margin="16dp"
-            android:background="@drawable/input_bg"
-            android:hint="Search for city..."
-            android:paddingStart="16dp"
-            android:paddingEnd="40dp"
-            android:textColor="#000"
-            android:textSize="16sp"
-            android:layout_marginTop="56dp"/>
+
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recycler_weather"

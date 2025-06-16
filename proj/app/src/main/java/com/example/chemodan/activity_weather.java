@@ -2,6 +2,7 @@ package com.example.chemodan;
 
 import android.app.AlertDialog;
 import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.Gravity;
@@ -56,8 +57,19 @@ public class activity_weather extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_weather);
         drawerLayout = findViewById(R.id.weather_drawer_layout);
-        ImageView btnMenu = findViewById(R.id.btn_menu_weather);
-        btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.LEFT));
+
+        View btnMenuBar = findViewById(R.id.btn_menu_weather_bar);
+        btnMenuBar.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.LEFT));
+
+        // Переход к экрану конвертера валют по нажатию на Money
+        View moneyBtn = findViewById(R.id.drawer_view_weather).findViewById(R.id.money_btn);
+        if (moneyBtn != null) {
+            moneyBtn.setOnClickListener(v -> {
+                drawerLayout.closeDrawer(Gravity.LEFT);
+                Intent intent = new Intent(this, currency_converter.class);
+                startActivity(intent);
+            });
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.weather_main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
