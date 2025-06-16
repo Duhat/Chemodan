@@ -17,6 +17,11 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.drawerlayout.widget.DrawerLayout;
+import android.widget.ImageView;
+import android.text.TextWatcher;
+import android.text.Editable;
+import android.util.Log;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -37,7 +42,9 @@ public class activity_weather extends AppCompatActivity {
     private RecyclerView recyclerView;
     private WeatherAdapter adapter;
     private List<WeatherItem> cities;
+    private List<WeatherItem> allCities; // для поиска
     private SharedPreferences preferences;
+    private DrawerLayout drawerLayout;
     private static final String PREF_NAME = "WeatherPrefs";
     private static final String KEY_CITIES = "cities";
     private static final String API_KEY = "c7ce10d8043a6da450ca891e9365f4a3";
@@ -48,6 +55,10 @@ public class activity_weather extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_weather);
+        drawerLayout = findViewById(R.id.weather_drawer_layout);
+        ImageView btnMenu = findViewById(R.id.btn_menu_weather);
+        btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.LEFT));
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.weather_main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -58,6 +69,7 @@ public class activity_weather extends AppCompatActivity {
         recyclerView = findViewById(R.id.recycler_weather);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         cities = new ArrayList<>();
+        allCities = new ArrayList<>();
         adapter = new WeatherAdapter(cities);
         recyclerView.setAdapter(adapter);
 
@@ -76,12 +88,24 @@ public class activity_weather extends AppCompatActivity {
             public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
                 int pos = viewHolder.getAdapterPosition();
                 String city = cities.get(pos).getCity();
-                cities.remove(pos);
-                saveCities();
+                removeCity(city);
                 adapter.notifyItemRemoved(pos);
             }
         };
         new ItemTouchHelper(simpleCallback).attachToRecyclerView(recyclerView);
+
+        // Поиск по городам
+        EditText search = findViewById(R.id.search_city);
+        search.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(Editable s) {
+                filterCities(s.toString());
+            }
+        });
     }
 
     private void loadSavedCities() {
@@ -92,16 +116,30 @@ public class activity_weather extends AppCompatActivity {
             preferences.edit().putStringSet(KEY_CITIES, saved).apply();
         }
         cities.clear();
+        allCities.clear();
         for (String city : saved) {
-            cities.add(new WeatherItem(city, 0, "-", 0, 0));
+            WeatherItem item = new WeatherItem(city, 0, "-", 0, 0);
+            cities.add(item);
+            allCities.add(item);
         }
         adapter.notifyDataSetChanged();
     }
 
     private void saveCities() {
         Set<String> set = new HashSet<>();
-        for (WeatherItem item : cities) set.add(item.getCity());
+        for (WeatherItem item : allCities) set.add(item.getCity());
         preferences.edit().putStringSet(KEY_CITIES, set).apply();
+    }
+
+    private void removeCity(String city) {
+        for (int i = 0; i < allCities.size(); i++) {
+            if (allCities.get(i).getCity().equalsIgnoreCase(city)) {
+                allCities.remove(i);
+                break;
+            }
+        }
+        filterCities(((EditText)findViewById(R.id.search_city)).getText().toString());
+        saveCities();
     }
 
     private void showAddCityDialog() {
@@ -114,10 +152,11 @@ public class activity_weather extends AppCompatActivity {
             .setPositiveButton("Add", (dialog, which) -> {
                 String city = input.getText().toString().trim();
                 if (!city.isEmpty() && !containsCity(city)) {
-                    cities.add(new WeatherItem(city, 0, "-", 0, 0));
+                    WeatherItem item = new WeatherItem(city, 0, "-", 0, 0);
+                    allCities.add(item);
                     saveCities();
-                    fetchWeatherForCity(city, cities.size() - 1);
-                    adapter.notifyDataSetChanged();
+                    fetchWeatherForCity(city, allCities.size() - 1);
+                    filterCities(((EditText)findViewById(R.id.search_city)).getText().toString());
                 } else {
                     Toast.makeText(this, "City already added or empty", Toast.LENGTH_SHORT).show();
                 }
@@ -127,20 +166,35 @@ public class activity_weather extends AppCompatActivity {
     }
 
     private boolean containsCity(String city) {
-        for (WeatherItem item : cities) {
+        for (WeatherItem item : allCities) {
             if (item.getCity().equalsIgnoreCase(city)) return true;
         }
         return false;
     }
 
+    private void filterCities(String query) {
+        cities.clear();
+        if (query.isEmpty()) {
+            cities.addAll(allCities);
+        } else {
+            for (WeatherItem item : allCities) {
+                if (item.getCity().toLowerCase().contains(query.toLowerCase())) {
+                    cities.add(item);
+                }
+            }
+        }
+        adapter.notifyDataSetChanged();
+    }
+
     private void fetchWeatherForAll() {
-        for (int i = 0; i < cities.size(); i++) {
-            fetchWeatherForCity(cities.get(i).getCity(), i);
+        for (int i = 0; i < allCities.size(); i++) {
+            fetchWeatherForCity(allCities.get(i).getCity(), i);
         }
     }
 
     private void fetchWeatherForCity(String city, int index) {
         String url = String.format(BASE_URL, city, API_KEY);
+        Log.d("WEATHER_URL", url);
         RequestQueue queue = Volley.newRequestQueue(this);
         StringRequest request = new StringRequest(Request.Method.GET, url,
             response -> {
@@ -154,12 +208,12 @@ public class activity_weather extends AppCompatActivity {
                     if (weatherArr.length() > 0) {
                         state = weatherArr.getJSONObject(0).getString("main");
                     }
-                    WeatherItem item = cities.get(index);
+                    WeatherItem item = allCities.get(index);
                     item.setTemp(temp);
                     item.setHumidity(humidity);
                     item.setWind(wind);
                     item.setState(state);
-                    adapter.notifyItemChanged(index);
+                    filterCities(((EditText)findViewById(R.id.search_city)).getText().toString());
                 } catch (JSONException e) {
                     Toast.makeText(this, "Error parsing weather for " + city, Toast.LENGTH_SHORT).show();
                 }
