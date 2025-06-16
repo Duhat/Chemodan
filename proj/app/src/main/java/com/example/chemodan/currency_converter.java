@@ -3,6 +3,7 @@ package com.example.chemodan;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.widget.Toast;
+import android.content.Intent;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -52,6 +53,16 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
         drawerLayout = findViewById(R.id.drawer_layout);
         ImageView btnMenu = findViewById(R.id.btn_menu);
         btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.LEFT));
+
+        // Открытие экрана погоды по нажатию на weather_btn
+        View weatherBtn = findViewById(R.id.weather_btn);
+        if (weatherBtn != null) {
+            weatherBtn.setOnClickListener(v -> {
+                drawerLayout.closeDrawer(Gravity.LEFT);
+                Intent intent = new Intent(this, activity_weather.class);
+                startActivity(intent);
+            });
+        }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());

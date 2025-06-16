@@ -52,6 +52,7 @@
         <!-- Weather -->
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#333" android:layout_marginVertical="4dp"/>
         <LinearLayout
+            android:id="@+id/weather_btn"
             android:layout_width="match_parent"
             android:layout_height="48dp"
             android:orientation="horizontal"
