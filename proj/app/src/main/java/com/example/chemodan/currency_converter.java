@@ -27,6 +27,9 @@ import java.util.List;
 import android.app.AlertDialog;
 import android.view.View;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import androidx.drawerlayout.widget.DrawerLayout;
+import android.view.Gravity;
+import android.widget.ImageView;
 
 public class currency_converter extends AppCompatActivity implements CurrencyAdapter.OnCurrencyChangeListener {
     private RecyclerView recyclerView;
@@ -38,6 +41,7 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
     private static final String API_KEY = "5594bb7d6b18e1c5968bb3e4";
     private static final String BASE_URL = "https://v6.exchangerate-api.com/v6/";
     private static final String[] ALL_CURRENCIES = {"USD", "EUR", "JPY", "GBP", "CNY", "RUB", "AUD", "CAD", "CHF", "SEK", "NZD", "SGD", "HKD", "NOK", "KRW", "TRY", "INR", "BRL", "ZAR"};
+    private DrawerLayout drawerLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +49,10 @@ public class currency_converter extends AppCompatActivity implements CurrencyAda
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_currency_converter);
         
+        drawerLayout = findViewById(R.id.drawer_layout);
+        ImageView btnMenu = findViewById(R.id.btn_menu);
+        btnMenu.setOnClickListener(v -> drawerLayout.openDrawer(Gravity.LEFT));
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
