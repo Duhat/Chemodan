@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Chemodan</string>
     <string name="add_currency">Добавить валюту</string>
+    <string name="default_web_client_id" translatable="false">794557569915-fjmvh27mb6ab5tk5k8b9l0ql6dbh50s6.apps.googleusercontent.com</string>
 </resources>

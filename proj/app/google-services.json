@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "794557569915",
+    "project_id": "chemodan-b4306",
+    "storage_bucket": "chemodan-b4306.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:794557569915:android:a0f71c6eba6f760a343bde",
+        "android_client_info": {
+          "package_name": "com.example.chemodan"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "794557569915-br2pltgnsa31ebodph4drfd4ca8g8ift.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.chemodan",
+            "certificate_hash": "b2a4e6826bf66fa612bf3cd3f3ee48fcc57562fa"
+          }
+        },
+        {
+          "client_id": "794557569915-fjmvh27mb6ab5tk5k8b9l0ql6dbh50s6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCxfXs4G-VCgjrEGymNVdpQDxU9voVkUgI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "794557569915-fjmvh27mb6ab5tk5k8b9l0ql6dbh50s6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
