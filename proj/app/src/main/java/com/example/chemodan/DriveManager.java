@@ -1,95 +1,117 @@
 package com.example.chemodan;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.util.Log;
-import android.widget.Toast;
 
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.api.client.googleapis.extensions.android.gms.auth.UserRecoverableAuthIOException;
+import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
+import com.google.api.client.http.AbstractInputStreamContent;
+import com.google.api.client.http.InputStreamContent;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 
-import com.example.chemodan.FileAdapter;
-
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.io.InputStream;
 
 public class DriveManager {
     private static final String TAG = "DriveManager";
+    private static DriveManager instance;
+
+    private final Context context;
+    private final Drive driveService;
+    private String rootFolderId;
+    private DriveAuthListener authListener;
 
     public interface DriveAuthListener {
         void onAuthorizationRequired(Intent authorizationIntent);
     }
 
-    private final Activity activity;
-    private final Drive driveService;
-    private final SharedPreferences preferences;
-    private final FolderAdapter folderAdapter;
-    private final FileAdapter fileAdapter;
-    private final DriveAuthListener authListener;
-
-    private static final String PREF_NAME = "DrivePrefs";
-    private static final String KEY_ROOT_FOLDER_ID = "root_folder_id";
-
-    public DriveManager(Activity activity, Drive driveService,
-                        FolderAdapter folderAdapter, FileAdapter fileAdapter,
-                        DriveAuthListener authListener) {
-        this.activity = activity;
+    private DriveManager(Context context, Drive driveService, DriveAuthListener listener) {
+        this.context = context.getApplicationContext();
         this.driveService = driveService;
-        this.folderAdapter = folderAdapter;
-        this.fileAdapter = fileAdapter;
-        this.preferences = activity.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE);
-        this.authListener = authListener;
+        this.authListener = listener;
     }
 
-    // Создание корневой папки, если еще нет
-    public void createRootFolderIfNeeded() {
-        String rootId = preferences.getString(KEY_ROOT_FOLDER_ID, null);
-        if (rootId == null) {
-            createFolder("DocStorage", null)
-                    .addOnSuccessListener(folderId -> {
-                        preferences.edit().putString(KEY_ROOT_FOLDER_ID, folderId).apply();
-                        loadFolders(folderId);
-                    })
-                    .addOnFailureListener(e -> {
-                        // Обработка ошибки
-                    });
-        } else {
-            loadFolders(rootId);
+    public static synchronized DriveManager getInstance(Context context, GoogleSignInAccount account, DriveAuthListener listener) {
+        if (instance == null) {
+            GoogleAccountCredential credential = GoogleAccountCredential.usingOAuth2(
+                    context,
+                    Collections.singleton(DriveScopes.DRIVE_FILE));
+
+            credential.setSelectedAccount(account.getAccount());
+
+            Drive driveService = new Drive.Builder(
+                    new NetHttpTransport(),
+                    GsonFactory.getDefaultInstance(),
+                    credential)
+                    .setApplicationName("Chemodan")
+                    .build();
+
+            instance = new DriveManager(context, driveService, listener);
         }
+        return instance;
+    }
+
+    public static synchronized DriveManager getInstance(Context context, Drive driveService, DriveAuthListener listener) {
+        if (instance == null) {
+            instance = new DriveManager(context, driveService, listener);
+        }
+        return instance;
     }
 
 
-    // Создание папки с именем и родителем
-    public Task<String> createFolder(String name, String parentId) {
-        Log.d(TAG, "Creating folder: " + name + ", parentId: " + parentId);
+    public Task<String> uploadFile(InputStream inputStream, String fileName, String mimeType, String folderId) {
         return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
             try {
-                File folderMetadata = new File()
-                        .setName(name)
-                        .setMimeType("application/vnd.google-apps.folder");
+                File fileMetadata = new File();
+                fileMetadata.setName(fileName);
+                fileMetadata.setMimeType(mimeType);
 
-                if (parentId != null && !parentId.isEmpty()) {
-                    folderMetadata.setParents(Collections.singletonList(parentId));
+                if (folderId != null && !folderId.isEmpty()) {
+                    fileMetadata.setParents(Collections.singletonList(folderId));
                 }
 
-                File folder = driveService.files().create(folderMetadata)
+                AbstractInputStreamContent content = new InputStreamContent(mimeType, inputStream);
+
+                File file = driveService.files().create(fileMetadata, content)
+                        .setFields("id")
+                        .execute();
+
+                Log.d(TAG, "File uploaded with ID: " + file.getId());
+                return file.getId();
+            } catch (Exception e) {
+                Log.e(TAG, "Error uploading file", e);
+                throw e;
+            }
+        });
+    }
+
+    public Task<String> createFolder(String folderName, String parentFolderId) {
+        return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
+            try {
+                File fileMetadata = new File();
+                fileMetadata.setName(folderName);
+                fileMetadata.setMimeType("application/vnd.google-apps.folder");
+
+                if (parentFolderId != null && !parentFolderId.isEmpty()) {
+                    fileMetadata.setParents(Collections.singletonList(parentFolderId));
+                }
+
+                File folder = driveService.files().create(fileMetadata)
                         .setFields("id")
                         .execute();
 
                 Log.d(TAG, "Folder created with ID: " + folder.getId());
                 return folder.getId();
-            } catch (UserRecoverableAuthIOException e) {
-                Log.e(TAG, "Authorization required to create folder", e);
-                activity.runOnUiThread(() -> authListener.onAuthorizationRequired(e.getIntent()));
-                throw e;
             } catch (Exception e) {
                 Log.e(TAG, "Error creating folder", e);
                 throw e;
@@ -97,119 +119,94 @@ public class DriveManager {
         });
     }
 
-    // Загрузка папок внутри папки parentId
-    public void loadFolders(String parentId) {
-        String queryParentId = (parentId != null && !parentId.isEmpty()) ? parentId : "root";
-
-        Log.d(TAG, "Loading folders for parentId: " + queryParentId);
-        Tasks.call(Executors.newSingleThreadExecutor(), () -> {
+    public Task<Void> deleteFile(String fileId) {
+        return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
             try {
+                driveService.files().delete(fileId).execute();
+                Log.d(TAG, "Deleted file/folder with ID: " + fileId);
+                return null;
+            } catch (Exception e) {
+                Log.e(TAG, "Error deleting file/folder", e);
+                throw e;
+            }
+        });
+    }
+
+    public Task<List<File>> listFiles(String folderId) {
+        return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
+            try {
+                String query;
+                if (folderId == null || folderId.isEmpty()) {
+                    query = "'root' in parents and trashed = false";
+                } else {
+                    query = "'" + folderId + "' in parents and trashed = false";
+                }
+
                 FileList result = driveService.files().list()
-                        .setQ("mimeType = 'application/vnd.google-apps.folder' and '" + queryParentId + "' in parents")
-                        .setFields("files(id, name, modifiedTime)")
+                        .setQ(query)
+                        .setFields("files(id, name, mimeType, modifiedTime)")
                         .execute();
 
-                Log.d(TAG, "Folders loaded: " + (result.getFiles() != null ? result.getFiles().size() : 0));
                 return result.getFiles();
-            } catch (UserRecoverableAuthIOException e) {
-                Log.e(TAG, "Authorization required to load folders", e);
-                activity.runOnUiThread(() -> authListener.onAuthorizationRequired(e.getIntent()));
+            } catch (Exception e) {
+                Log.e(TAG, "Error listing files", e);
                 throw e;
+            }
+        });
+    }
+
+    public Task<String> createRootFolderIfNeeded() {
+        if (rootFolderId != null && !rootFolderId.isEmpty()) {
+            return Tasks.forResult(rootFolderId);
+        }
+
+        return createFolder("ChemodanRootFolder", null)
+                .addOnSuccessListener(id -> rootFolderId = id)
+                .addOnFailureListener(e -> Log.e(TAG, "Failed to create root folder", e));
+    }
+
+    public String getRootFolderId() {
+        return rootFolderId;
+    }
+
+    public void setAuthListener(DriveAuthListener listener) {
+        this.authListener = listener;
+    }
+
+    public Task<Void> deleteFolder(String folderId) {
+        return deleteFile(folderId);
+    }
+
+    public interface DriveFilesListener {
+        void onFilesLoaded(List<FileItem> files);
+        void onError(Exception e);
+    }
+
+    public interface DriveOperationListener {
+        void onSuccess();
+        void onFailure(Exception e);
+    }
+
+    public Task<List<File>> loadFolders(String folderId) {
+        return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
+            try {
+                String query = "mimeType='application/vnd.google-apps.folder' and trashed=false";
+                if (folderId != null && !folderId.isEmpty()) {
+                    query += " and '" + folderId + "' in parents";
+                } else {
+                    query += " and 'root' in parents";
+                }
+
+                FileList result = driveService.files().list()
+                        .setQ(query)
+                        .setFields("files(id, name, createdTime)")
+                        .execute();
+
+                return result.getFiles();
             } catch (Exception e) {
                 Log.e(TAG, "Error loading folders", e);
                 throw e;
             }
-        }).addOnSuccessListener(files -> {
-            List<FolderItem> folders = new ArrayList<>();
-            for (File file : files) {
-                folders.add(new FolderItem(
-                        file.getName(),
-                        file.getId(),
-                        getItemCount(file.getId()),
-                        formatDate(file.getModifiedTime())
-                ));
-            }
-            folderAdapter.updateFolders(folders);
-        }).addOnFailureListener(e -> {
-            if (!(e instanceof UserRecoverableAuthIOException)) {
-                Toast.makeText(activity, "Failed to load folders: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
         });
     }
-
-    // Загрузка файлов внутри папки folderId
-    public void loadFilesInFolder(String folderId) {
-        String queryParentId = (folderId != null && !folderId.isEmpty()) ? folderId : "root";
-
-        Log.d(TAG, "Loading files for folderId: " + queryParentId);
-        Tasks.call(Executors.newSingleThreadExecutor(), () -> {
-            try {
-                FileList result = driveService.files().list()
-                        .setQ("'" + queryParentId + "' in parents")
-                        .setFields("files(id, name, mimeType, modifiedTime)")
-                        .execute();
-
-                Log.d(TAG, "Files loaded: " + (result.getFiles() != null ? result.getFiles().size() : 0));
-                return result.getFiles();
-            } catch (UserRecoverableAuthIOException e) {
-                Log.e(TAG, "Authorization required to load files", e);
-                activity.runOnUiThread(() -> authListener.onAuthorizationRequired(e.getIntent()));
-                throw e;
-            } catch (Exception e) {
-                Log.e(TAG, "Error loading files", e);
-                throw e;
-            }
-        }).addOnSuccessListener(files -> {
-            List<FileItem> fileItems = new ArrayList<>();
-            for (File file : files) {
-                fileItems.add(new FileItem(
-                        file.getName(),
-                        file.getId(),
-                        file.getMimeType(),
-                        formatDate(file.getModifiedTime())
-                ));
-            }
-            fileAdapter.updateFiles(fileItems);
-        }).addOnFailureListener(e -> {
-            if (!(e instanceof UserRecoverableAuthIOException)) {
-                Toast.makeText(activity, "Failed to load files: " + e.getMessage(), Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
-    // Подсчет количества элементов в папке
-    private int getItemCount(String folderId) {
-        try {
-            FileList result = driveService.files().list()
-                    .setQ("'" + folderId + "' in parents")
-                    .setFields("files(id)")
-                    .execute();
-            return result.getFiles().size();
-        } catch (Exception e) {
-            Log.e(TAG, "Error getting item count for folderId: " + folderId, e);
-            return 0;
-        }
-    }
-
-    // Форматирование даты
-    private String formatDate(com.google.api.client.util.DateTime dateTime) {
-        if (dateTime == null) return "N/A";
-        return new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault())
-                .format(new java.util.Date(dateTime.getValue()));
-    }
-
-    public Task<Void> deleteFolder(String folderId) {
-        return Tasks.call(Executors.newSingleThreadExecutor(), () -> {
-            try {
-                driveService.files().delete(folderId).execute();
-                return null;
-            } catch (UserRecoverableAuthIOException e) {
-                activity.runOnUiThread(() -> authListener.onAuthorizationRequired(e.getIntent()));
-                throw e;
-            } catch (Exception e) {
-                throw e;
-            }
-        });
-    }
-
 }
