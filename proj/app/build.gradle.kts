@@ -82,15 +82,24 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:20.7.0")
     implementation("com.google.android.gms:play-services-auth-api-phone:18.0.1")
 
-    // Google Drive (одна зависимость с актуальной версией)
-    implementation("com.google.api-client:google-api-client-android:2.0.0") {
-        exclude(group = "org.apache.httpcomponents")
+    // Google Play Services Auth (для Google Sign-In)
+    implementation ("com.google.android.gms:play-services-auth:20.6.0")
+
+    // Google Drive API
+    implementation("com.google.apis:google-api-services-drive:v3-rev20241014-2.0.0") {
+        exclude(group = "com.google.guava")
+        exclude(group = "com.google.guava", module = "guava-jdk5")
     }
     implementation("com.google.apis:google-api-services-drive:v3-rev20241014-2.0.0") {
         exclude(group = "com.google.guava")
         exclude(group = "com.google.guava", module = "guava-jdk5")
     }
 
+    // Google API Client для Android и JSON
+    implementation("com.google.api-client:google-api-client-android:2.0.0") {
+        exclude(group = "org.apache.httpcomponents")
+    }
+    implementation("com.google.api-client:google-api-client-gson:2.0.0")
     // Documents
     implementation("androidx.documentfile:documentfile:1.0.1")
 

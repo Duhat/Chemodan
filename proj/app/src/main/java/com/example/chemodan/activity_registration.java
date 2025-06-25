@@ -121,11 +121,19 @@ public class activity_registration extends AppCompatActivity {
     }
 
     private void proceedToMainApp(boolean isSignedIn) {
-        Intent intent = new Intent(this, doc_main_activity.class);
+        Intent intent = new Intent(this, ChemodanActivity.class);
         intent.putExtra("isSignedIn", isSignedIn);
+
+
+        GoogleSignInAccount account = GoogleSignIn.getLastSignedInAccount(this);
+        if (account != null) {
+            intent.putExtra("google_account", account.getId());
+        }
+
         startActivity(intent);
         finish();
     }
+
 
     @Override
     protected void onDestroy() {

@@ -18,17 +18,24 @@
         android:theme="@style/Theme.Chemodan"
         tools:targetApi="31">
         <activity
+            android:name=".ChemodanActivity"
+            android:exported="false" />
+        <activity
+            android:name=".WorldTimeActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".FolderContentActivity"
             android:exported="false" />
         <activity
             android:name=".doc_main_activity"
-            android:exported="false"></activity>
+            android:exported="false" />
         <activity
             android:name=".activity_weather"
             android:exported="false" />
         <activity
             android:name=".currency_converter"
-            android:exported="false"></activity>
+            android:exported="false" />
         <activity
             android:name=".activity_registration"
             android:exported="true">
@@ -38,6 +45,17 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
     </application>
 
 </manifest>
